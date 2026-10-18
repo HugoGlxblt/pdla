@@ -1,0 +1,115 @@
+?start: body
+
+?body: (stmt ( ";" | NEWLINE )*)*
+
+?stmt: expr
+    | import
+    | include
+    | name "=" expr -> variable_assignment
+    | "func" name "=" function -> function_assignment
+    | control_flow_stmt
+
+import: "import" dotted_name ("as" name)?
+include: "include" filepath
+
+?control_flow_stmt: if_stmt | while_stmt | do_stmt | for_to_stmt | for_in_stmt | with_stmt | break_stmt | continue_stmt
+
+do_stmt: "do" body "end"
+if_stmt: "if" expr "then" body ("elseif" expr "then" body)* ("else" body)? "end"
+while_stmt: "while" expr "do" body "end"
+for_to_stmt: "for" name "=" expr "to" expr "do" body "end"
+for_in_stmt: "for" name "in" expr "do" body "end"
+with_stmt: "with" expr "as" name "do" body "end"
+break_stmt: "break"
+continue_stmt: "continue"
+
+?expr: ternary
+
+?ternary: or
+    | or "?" expr ":" ternary -> ternary
+
+?or: and
+    | or "or" and -> or
+
+?and: not
+    | and "and" not -> and
+
+?not: "not" not -> not
+    | cmp
+
+?cmp: add
+    | cmp "==" add -> equal
+    | cmp "!=" add -> not_equal
+    | cmp "<" add  -> less
+    | cmp "<=" add -> less_equal
+    | cmp ">" add  -> greater
+    | cmp ">=" add -> greater_equal
+
+?add: mul
+    | add "+" mul -> add
+    | add "-" mul -> sub
+
+?mul: unary
+    | mul "*" unary -> mul
+    | mul "/" unary -> div
+    | mul "%" unary -> mod
+
+?unary: pow
+      | "+" unary -> pos
+      | "-" unary -> neg
+
+?pow: primary
+      | primary "^" unary -> pow
+
+?primary: number
+        | string
+        | "{" [array_elements] "}" -> array
+        | "None" -> const_none
+        | "True" -> const_true
+        | "False" -> const_false
+        | dotted_name "[" array_access_index "]" -> array_access
+        | dotted_name "(" [arguments] ")" -> function_call
+        | dotted_name -> variable
+        | "(" expr ")"
+
+function:  "[" [parameters] "]" "->" (expr | do_stmt)
+
+arguments: expr ("," expr)*
+array_elements: expr ("," expr)*
+array_access_index: expr -> simple_access
+    | (":" | "::") -> full_access
+    | expr ":" -> slice_start_access
+    | ":" expr -> slice_end_access
+    | "::" expr -> slice_step_access
+    | expr ":" expr -> slice_start_end_access
+    | expr "::" expr -> slice_start_step_access
+    | expr ":" expr ":" expr -> slice_start_end_step_access
+parameters: dotted_name ("," dotted_name)*
+
+// from Python grammar
+?name: NAME
+?number: DEC_NUMBER | HEX_NUMBER | BIN_NUMBER | OCT_NUMBER | FLOAT_NUMBER | IMAG_NUMBER
+string: STRING | LONG_STRING
+
+?dotted_name: name ("." name)*
+?filepath: QUOTED_FILEPATH | unquoted_filepath
+
+QUOTED_FILEPATH.2: /"[^"]+"/
+unquoted_filepath: /[^\/\s]+/ ("/" /[^\/\s]+/)*
+
+%import common.WS_INLINE
+%import common.NEWLINE
+%import python.NAME
+%import python.STRING
+%import python.LONG_STRING
+%import python.DEC_NUMBER
+%import python.HEX_NUMBER
+%import python.BIN_NUMBER
+%import python.OCT_NUMBER
+%import python.FLOAT_NUMBER
+%import python.IMAG_NUMBER
+%import python.COMMENT
+
+%ignore WS_INLINE
+%ignore COMMENT
+%ignore /[ \t]*\r?\n([ \t]*\r?\n)*/
