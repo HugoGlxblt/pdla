@@ -15,6 +15,4 @@ jobs:
       - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/*.whl
-            dist/*.tar.gz
+          files: dist/*
