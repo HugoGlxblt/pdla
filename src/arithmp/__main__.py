@@ -18,24 +18,47 @@ def main(c: str | None, filepath: Path | None) -> None:
     """
     parser = Parser()
 
-    try:
-        if c is not None:
+    if c is not None:
+        try:
             result = parser.parse(None, c)
-        elif filepath is not None:
+            if result is not None:
+                click.echo(result)
+        except ParserException as e:
+            click.echo(
+                f"Error in expression at line {e.context.line} column {e.context.column} '{e.context.source}': {e}'"
+            )
+        return
+
+    if filepath is not None:
+        try:
             result = parser.parse(filepath, filepath.read_text())
-        else:
-            result = None
+            if result is not None:
+                click.echo(result)
+        except ParserException as e:
+            click.echo(
+                f"Error in script '{filepath}' at line {e.context.line} column {e.context.column} '{e.context.source}': {e}'"
+            )
+        return
 
-        if result is not None:
-            click.echo(result)
+    click.echo("Arithmp Interactive Interpreter. Press Ctrl+D or Ctrl+C to exit.")
+    while True:
+        try:
+            expression = input("arithmp> ")
+            if not expression.strip():
+                continue
 
-    except ParserException as e:
-        source_name = (
-            f"script '{e.context.filepath}'" if e.context.filepath else "expression"
-        )
-        click.echo(
-            f"Error in {source_name} at line {e.context.line} column {e.context.column} '{e.context.source}': {e}'"
-        )
+            result = parser.parse(None, expression)
+            if result is not None:
+                click.echo(result)
+
+        except EOFError:
+            click.echo()
+            break
+        except KeyboardInterrupt:
+            click.echo()
+            break
+        except ParserException as e:
+            click.echo(f"Error: {e}")
 
 
 if __name__ == "__main__":
